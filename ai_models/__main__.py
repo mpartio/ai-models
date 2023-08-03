@@ -152,6 +152,13 @@ def main():
     )
 
     parser.add_argument(
+        "--lead-time-configuration",
+        type=str,
+        default=None,
+        help="Select leadtime configuration, currently only 'HRES'",
+    )
+
+    parser.add_argument(
         "--model-version",
         default="latest",
         help="Model version",
