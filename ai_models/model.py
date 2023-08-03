@@ -64,7 +64,7 @@ class CdsInput:
     def fields_sfc(self):
         LOG.info("Loading surface fields from the CDS")
         request = dict(
-            product_type="reanalysis",
+            # product_type="reanalysis",
             date=self.owner.date,
             time=self.owner.time,
             param=self.owner.param_sfc,
@@ -79,7 +79,7 @@ class CdsInput:
         LOG.info("Loading pressure fields  from the CDS")
         param, level = self.owner.param_level_pl
         request = dict(
-            product_type="reanalysis",
+            # product_type="reanalysis",
             date=self.owner.date,
             time=self.owner.time,
             param=param,
@@ -116,8 +116,8 @@ class FileInput:
 class FileOutput:
     def __init__(self, owner, path, metadata, **kwargs):
         self._first = True
-        metadata.setdefault("expver", owner.expver)
-        metadata.setdefault("class", "ml")
+        # metadata.setdefault("expver", owner.expver)
+        # metadata.setdefault("class", "ml")
 
         LOG.info("Writting results to %s.", path)
         self.path = path
