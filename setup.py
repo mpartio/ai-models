@@ -43,11 +43,17 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "entrypoints",
-        "climetlab>=0.15.0",
+        "climetlab>=0.19.0",
         "multiurl",
         "ecmwflibs>=0.5.3",
         "gputil",
     ],
+    extras_require={
+        "provenance": [
+            "nvsmi",
+            "GitPython",
+        ]
+    },
     zip_safe=True,
     keywords="tool",
     entry_points={

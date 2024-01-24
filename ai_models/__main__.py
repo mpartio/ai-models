@@ -11,12 +11,14 @@ import os
 import shlex
 import sys
 
-from .model import available_inputs, available_models, available_outputs, load_model
+from .inputs import available_inputs
+from .model import Timer, available_models, load_model
+from .outputs import available_outputs
 
 LOG = logging.getLogger(__name__)
 
 
-def main():
+def _main():
     parser = argparse.ArgumentParser()
 
     # See https://github.com/pytorch/pytorch/issues/77764
@@ -44,11 +46,31 @@ def main():
     )
 
     parser.add_argument(
+        "--archive-requests",
+        help=(
+            "Save mars archive requests to FILE."
+            "Use --requests-extra to extend or overide the requests. "
+        ),
+        metavar="FILE",
+    )
+
+    parser.add_argument(
         "--requests-extra",
         help=(
-            "Extends the retrieve requests with a list of key1=value1,key2=value."
-            " Implies --retrieve-requests."
+            "Extends the retrieve or archive requests with a list of key1=value1,key2=value."
         ),
+    )
+
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help=("Dump the requests in JSON format."),
+    )
+
+    parser.add_argument(
+        "--dump-provenance",
+        metavar="FILE",
+        help=("Dump information for tracking provenance."),
     )
 
     parser.add_argument(
@@ -92,8 +114,10 @@ def main():
     parser.add_argument(
         "--assets-sub-directory",
         help="Load assets from a subdirectory of --assets based on the name of the model.",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
     )
+
+    parser.parse_args(["--no-assets-sub-directory"])
 
     parser.add_argument(
         "--assets-list",
@@ -159,6 +183,29 @@ def main():
     )
 
     parser.add_argument(
+        "--hindcast-reference-year",
+        help="For encoding hincast-like outputs",
+    )
+
+    parser.add_argument(
+        "--staging-dates",
+        help="For encoding hincast-like outputs",
+    )
+
+    parser.add_argument(
+        "--only-gpu",
+        help="Fail if GPU is not available",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--deterministic",
+        help="Fail if GPU is not available",
+        action="store_true",
+    )
+
+    # TODO: deprecate that option
+    parser.add_argument(
         "--model-version",
         default="latest",
         help="Model version",
@@ -172,7 +219,7 @@ def main():
             help="The model to run",
         )
 
-    args = parser.parse_args()
+    args, unknownargs = parser.parse_known_args()
 
     if args.models:
         for p in sorted(available_models()):
@@ -188,7 +235,7 @@ def main():
     if args.file is not None:
         args.input = "file"
 
-    if not args.fields and not args.retrieve_requests and not args.requests_extra:
+    if not args.fields and not args.retrieve_requests:
         logging.basicConfig(
             level="DEBUG" if args.debug else "INFO",
             format="%(asctime)s %(levelname)s %(message)s",
@@ -205,14 +252,21 @@ def main():
     if args.class_ is not None:
         args.metadata["class"] = args.class_
 
-    model = load_model(args.model, **vars(args))
+    model = load_model(args.model, **vars(args), model_args=unknownargs)
 
     if args.fields:
         model.print_fields()
         sys.exit(0)
 
-    if args.retrieve_requests or args.requests_extra:
-        model.print_requests(args.requests_extra)
+    if args.requests_extra:
+        if not args.retrieve_requests and not args.archive_requests:
+            parser.error(
+                "You need to specify --retrieve-requests or --archive-requests"
+            )
+
+    # This logic is a bit convoluted, but it is for backwards compatibility.
+    if args.retrieve_requests or (args.requests_extra and not args.archive_requests):
+        model.print_requests()
         sys.exit(0)
 
     if args.assets_list:
@@ -233,6 +287,21 @@ def main():
             shlex.join([sys.argv[0], "--download-assets"] + sys.argv[1:]),
         )
         sys.exit(1)
+
+    model.finalise()
+
+    if args.dump_provenance:
+        with Timer("Collect provenance information"):
+            with open(args.dump_provenance, "w") as f:
+                prov = model.provenance()
+                import json  # import here so it is not listed in provenance
+
+                json.dump(prov, f, indent=4)
+
+
+def main():
+    with Timer("Total time"):
+        _main()
 
 
 if __name__ == "__main__":
