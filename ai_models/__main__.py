@@ -252,6 +252,12 @@ def _main():
     if args.class_ is not None:
         args.metadata["class"] = args.class_
 
+    for k in args.metadata.keys():
+        try:
+            args.metadata[k] = int(args.metadata[k])
+        except ValueError:
+            pass
+
     model = load_model(args.model, **vars(args), model_args=unknownargs)
 
     if args.fields:
