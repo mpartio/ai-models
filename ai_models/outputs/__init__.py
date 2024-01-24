@@ -17,8 +17,9 @@ LOG = logging.getLogger(__name__)
 class FileOutput:
     def __init__(self, owner, path, metadata, **kwargs):
         self._first = True
-        metadata.setdefault("expver", owner.expver)
-        metadata.setdefault("class", "ml")
+        if owner.expver is not None:
+            metadata.setdefault("expver", owner.expver)
+            metadata.setdefault("class", "ml")
 
         LOG.info("Writing results to %s.", path)
         self.path = path
